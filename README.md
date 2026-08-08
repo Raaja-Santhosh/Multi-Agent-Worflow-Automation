@@ -1,42 +1,50 @@
 <div align="center">
 
 # 🎼 OrchestraAI
-
-### Multi-Agent Workflow Automation Platform
-
-**React · FastAPI · LangGraph · Celery · Redis · PostgreSQL · WebSockets**
+**The Autonomous Multi-Agent Swarm Orchestrator**
 
 [![Python Tests](https://img.shields.io/badge/tests-59%20passed-brightgreen)](backend/tests/)
 [![Python](https://img.shields.io/badge/python-3.11+-blue)](https://python.org)
+[![React](https://img.shields.io/badge/react-19-61DAFB)](https://react.dev)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 *Coordinate autonomous AI agents through one intelligent orchestration platform.*
+
+[**Live Demo**](http://localhost:5173) • [**Architecture**](#architecture) • [**Getting Started**](#quick-start)
 
 </div>
 
 ---
 
-## Overview
+## ⚡ What is OrchestraAI?
 
-OrchestraAI is a production-grade multi-agent orchestration platform where **LangGraph agents autonomously decompose complex natural language goals** into parallel subtasks, execute them through specialized workers, and stream live reasoning traces to the frontend via WebSockets.
+OrchestraAI isn't just another LLM chatbot wrapper. It is a **production-grade multi-agent orchestration platform** that takes a single high-level goal and autonomously builds a specialized workforce to solve it. 
 
-Unlike a single LLM call, OrchestraAI provides:
-- **DAG-based task decomposition** — Goals are broken into dependency-aware subtask graphs
-- **Specialized agent roles** — Planner, Research, Analyze, Summarize, Write, and Critic agents
-- **Autonomous quality control** — A Critic agent reviews every output and triggers retries
-- **Real-time observability** — Live WebSocket telemetry stream showing agent reasoning
-- **Fault tolerance** — Persistent state in PostgreSQL; resume from any failure point
+Using **LangGraph**, it dynamically breaks down complex objectives into a dependency-aware Directed Acyclic Graph (DAG) of subtasks. Then, it dispatches specialized agents (Researchers, Analyzers, Writers) to execute them in parallel, complete with real-time WebSocket telemetry, cross-session memory, sandboxed Python execution, and an autonomous Critic for quality control.
+
+### ✨ Key Capabilities
+
+- **🧠 Dynamic DAG Decomposition:** The Planner node breaks down your goal into a verifiable, dependency-aware graph of subtasks.
+- **🛡️ Autonomous Critic Retry Loop:** Outputs are automatically scored. If the Critic gives a score below 0.6, the subtask is re-routed and retried autonomously.
+- **🔍 Real-Time Web Search:** Research agents access live internet data via Tavily to pull facts, pricing, and citations rather than hallucinating.
+- **💾 Cross-Session Memory:** `pgvector` injects past learnings into new plans, giving the platform long-term epistemic memory.
+- **🐍 Sandboxed Execution:** Analyzers can securely execute generated Python code to crunch numbers or parse complex data structures.
+- **🔄 LLM Resilience Chain:** Built-in 4-model fallback chain (Gemini 2.0 Flash → Flash Lite → 2.5 Flash Lite → 3.5 Flash Lite) ensures zero downtime during API rate limits.
+- **📡 Sub-100ms Observability:** Watch the swarm "think" in real-time on the React dashboard via Redis Pub/Sub and WebSockets.
 
 ---
 
-## Architecture
+## 🏗️ Architecture
 
-```
+At its core, OrchestraAI separates the web gateway from the heavy-lifting agent swarm to ensure enterprise scalability.
+
+```text
 ┌─────────────┐     ┌──────────────────────────────────────────────┐
 │   React UI  │◄───►│              FastAPI Gateway                 │
 │  (Vite)     │ WS  │  ┌──────┐  ┌──────────┐  ┌──────────────┐  │
-└─────────────┘     │  │ Auth │  │ Task API │  │ Admin/Metrics│  │
-                    │  │(JWT) │  │(CRUD)    │  │(SQL Agg)     │  │
+│             │     │  │ Auth │  │ Task API │  │ Admin/Metrics│  │
+└─────────────┘     │  │(JWT) │  │(CRUD)    │  │(SQL Agg)     │  │
                     │  └──┬───┘  └────┬─────┘  └──────────────┘  │
                     │     │Rate       │                            │
                     │     │Limit      │ Celery .delay()            │
@@ -44,7 +52,7 @@ Unlike a single LLM call, OrchestraAI provides:
                           │           ▼
                     ┌─────┴─────┐  ┌─────────────────────────────┐
                     │ PostgreSQL│  │     Celery Worker            │
-                    │  (State)  │  │  ┌─────────────────────────┐│
+                    │ (pgvector)│  │  ┌─────────────────────────┐│
                     └───────────┘  │  │   LangGraph StateGraph  ││
                                    │  │                         ││
                     ┌───────────┐  │  │  Planner ──► Router ──┐ ││
@@ -57,48 +65,15 @@ Unlike a single LLM call, OrchestraAI provides:
                                    └─────────────────────────────┘
 ```
 
-### Agent Pipeline (LangGraph StateGraph)
-
-| Agent | Role | Key Behavior |
-|-------|------|--------------|
-| **Planner** | Decomposes goal into subtask DAG | Outputs JSON with `depends_on` fields for dependency ordering |
-| **Router** | Conditional edge function | Routes to next available subtask; skips those with unmet dependencies |
-| **Workers** | Execute subtasks (research/analyze/summarize/write) | Compile context from prior completed subtasks for chain-of-thought |
-| **Critic** | Quality gate | Reviews each output; can trigger retries on failure |
-
-### LLM Resilience
-
-All agents use a **4-model fallback chain** via LangChain's `with_fallbacks()`:
-
-```
-gemini-2.0-flash → gemini-2.0-flash-lite → gemini-2.5-flash-lite → gemini-3.5-flash-lite
-```
-
-If the primary model hits a rate limit (429), the system automatically cascades to the next model with an independent quota pool — **zero downtime, zero human intervention**.
-
 ---
 
-## Tech Stack
-
-| Layer | Technology | Why |
-|-------|-----------|-----|
-| **Frontend** | React 19 + Vite + Framer Motion | Real-time dashboard with smooth animations |
-| **API** | FastAPI + Pydantic v2 | Async Python with automatic OpenAPI docs |
-| **Agent Framework** | LangGraph + LangChain | Deterministic state machine for multi-agent workflows |
-| **Task Queue** | Celery + Redis | Async job execution with retry semantics |
-| **Real-time** | Redis Pub/Sub + WebSockets | Sub-100ms event delivery to frontend |
-| **Database** | PostgreSQL + SQLAlchemy | Persistent task state, obs logs, user auth |
-| **Auth** | JWT + bcrypt + slowapi | Rate-limited endpoints with constant-time password comparison |
-| **Infra** | Docker Compose | One-command development environment |
-
----
-
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 - Docker Desktop
 - Node.js 18+
-- A Gemini API key ([Get one here](https://aistudio.google.com/apikey))
+- [Gemini API Key](https://aistudio.google.com/apikey)
+- [Tavily API Key](https://tavily.com/) (For Web Search)
 
 ### 1. Clone & Configure
 
@@ -107,22 +82,25 @@ git clone https://github.com/Raaja-Santhosh/Multi-Agent-Worflow-Automation.git
 cd Multi-Agent-Worflow-Automation
 ```
 
-Create `backend/.env`:
+Create `backend/.env` with your API keys:
 ```env
 DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/agentdb
 REDIS_URL=redis://redis:6379/0
 GOOGLE_API_KEY=your_gemini_api_key_here
+TAVILY_API_KEY=your_tavily_api_key_here
+MEMORY_ENABLED=true
+ENABLE_CODE_EXEC=true
 ```
 
-### 2. Start Backend (Docker)
+### 2. Launch the Swarm (Backend)
+
+We use Docker Compose to spin up the entire infrastructure (PostgreSQL, Redis, FastAPI, Celery).
 
 ```bash
 docker compose up --build -d
 ```
 
-This launches: PostgreSQL, Redis, FastAPI (port 8000), and Celery Worker.
-
-### 3. Start Frontend
+### 3. Launch the Dashboard (Frontend)
 
 ```bash
 cd frontend
@@ -130,76 +108,37 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173)
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## Testing
+## 🧪 Testing
+
+The backend boasts a comprehensive test suite (59 tests) fully mocked for CI/CD integration, covering LLM fallback chains, DAG cycle detection, and JSON parsing edge cases.
 
 ```bash
 cd backend
 python -m pytest tests/ -v --tb=short
 ```
 
-**59 tests** covering:
-
-| Module | Tests | Coverage |
-|--------|-------|----------|
-| `test_llm_factory.py` | 18 | Content normalization, fallback chain config, env overrides |
-| `test_router.py` | 17 | DAG dependency routing, edge cases, parametrized status sweep |
-| `test_planner.py` | 9 | JSON parsing, code fences, failure paths, list content format |
-| `test_workers.py` | 15 | Subtask execution, context compilation, failure handling |
-
-All tests mock external dependencies (LLM, Redis, Postgres) for fast, reliable CI execution.
-
 ---
 
-## API Endpoints
+## 📂 Project Structure
 
-| Method | Endpoint | Description | Rate Limit |
-|--------|----------|-------------|------------|
-| `POST` | `/api/auth/register` | Create account | 3/min |
-| `POST` | `/api/auth/login` | Get JWT token | 5/min |
-| `POST` | `/api/task-runs` | Submit a goal | — |
-| `GET` | `/api/task-runs` | List all runs | — |
-| `GET` | `/api/task-runs/{id}` | Get run details | — |
-| `GET` | `/api/admin/metrics` | Dashboard metrics | — |
-| `WS` | `/ws/task-runs/{id}` | Live telemetry stream | — |
-| `GET` | `/health` | Health check | — |
-
----
-
-## Project Structure
-
-```
+```text
 ├── backend/
-│   ├── agents/
-│   │   ├── llm.py          # LLM factory with 4-model fallback chain
-│   │   ├── planner.py      # Goal → subtask DAG decomposition
-│   │   ├── workers.py      # Specialized execution agents
-│   │   ├── critic.py       # Autonomous quality reviewer
-│   │   ├── graph.py        # LangGraph StateGraph definition
-│   │   ├── emit.py         # Redis pub/sub event emitter
-│   │   └── state.py        # TypedDict state schema
-│   ├── app/
-│   │   ├── main.py         # FastAPI app with rate limiting
-│   │   ├── auth/           # JWT auth + bcrypt + slowapi
-│   │   ├── tasks/          # Celery task dispatch
-│   │   ├── admin/          # SQL aggregation metrics
-│   │   ├── websocket/      # Real-time event streaming
-│   │   └── models/         # SQLAlchemy models
-│   └── tests/              # 59 pytest unit tests
+│   ├── agents/             # The brain: Planner, Workers, Critic, Memory, LangGraph
+│   ├── app/                # The gateway: FastAPI, JWT, WebSockets, DB Models
+│   └── tests/              # 59 Pytest unit tests (Mocked LLM & DB)
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/          # Dashboard, Landing, Features, etc.
 │   │   ├── components/     # TaskTree, ActivityFeed, OutputPanel
-│   │   └── hooks/          # useAgentStream WebSocket hook
-│   └── public/
-└── docker-compose.yml      # One-command infrastructure
+│   │   ├── pages/          # Dashboard, Architecture, Pricing, etc.
+│   │   └── hooks/          # Real-time WebSocket hook (useAgentStream)
+└── docker-compose.yml      # Infrastructure orchestration
 ```
 
 ---
-
-## License
-
-MIT
+<div align="center">
+<i>Built for the future of asynchronous work.</i>
+</div>

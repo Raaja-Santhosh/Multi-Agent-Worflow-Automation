@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [runData, setRunData] = useState(null);
   const [currentSubtaskId, setCurrentSubtaskId] = useState(null);
+  const [livePlan, setLivePlan] = useState(null);
 
   const { events, isConnected } = useAgentStream(runId);
 
@@ -26,6 +27,7 @@ export default function Dashboard() {
       setError(null);
       setRunData(null);
       setCurrentSubtaskId(null);
+      setLivePlan(null);
 
       const res = await client.post('/task-runs', { goal });
       setRunId(res.data.id);
@@ -41,6 +43,10 @@ export default function Dashboard() {
   useEffect(() => {
     if (events.length === 0) return;
     const latestEvent = events[events.length - 1];
+
+    if (latestEvent.data && latestEvent.data.subtasks) {
+      setLivePlan(latestEvent.data);
+    }
 
     if (latestEvent.data && latestEvent.data.subtask_id) {
       setCurrentSubtaskId(latestEvent.data.subtask_id);
@@ -195,7 +201,7 @@ export default function Dashboard() {
         {/* Left: Task Decomposition Tree */}
         <div className="lg:col-span-5 h-[520px]">
           <TaskTree
-            plan={runData?.plan}
+            plan={livePlan || runData?.plan}
             currentSubtaskId={currentSubtaskId}
             runStatus={runData?.status}
           />

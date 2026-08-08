@@ -12,10 +12,14 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     FRONTEND_URL: str = "http://localhost:5173"
     
-    # API Keys
+    # LLM API Keys
     GEMINI_API_KEY: str = ""
     GROQ_API_KEY: str = ""
     TAVILY_API_KEY: str = ""
+    
+    # Feature Flags
+    MEMORY_ENABLED: str = "true"       # Enable cross-session memory (pgvector)
+    ENABLE_CODE_EXEC: str = "false"    # Enable sandboxed Python execution (off by default for safety)
     
     class Config:
         case_sensitive = True

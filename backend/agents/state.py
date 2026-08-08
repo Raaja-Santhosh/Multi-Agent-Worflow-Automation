@@ -1,14 +1,17 @@
 from typing import TypedDict, List, Dict, Any, Optional
+
 class SubTask(TypedDict):
     id: str
-    type: str # 'research', 'analyze', 'summarize', 'write'
+    type: str  # 'research', 'analyze', 'summarize', 'write'
     description: str
     depends_on: List[str]
     expected_output: str
-    status: str # 'pending', 'running', 'complete', 'failed', 'retrying'
+    status: str  # 'pending', 'running', 'complete', 'failed', 'retrying'
     output: Optional[str]
     error: Optional[str]
     retry_count: int
+    retry_prompt: Optional[str]  # Critic feedback for retry attempts
+    sources: List[str]  # URLs from web search (research tasks)
 
 class AgentState(TypedDict):
     run_id: str

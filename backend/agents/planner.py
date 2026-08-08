@@ -1,9 +1,9 @@
 import json
 import time
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from agents.state import AgentState
 from agents.emit import emit_event, log_observation
+from agents.llm import get_llm, _normalize_content
 
 def planner_node(state: AgentState) -> AgentState:
     run_id = state["run_id"]
@@ -29,18 +29,11 @@ Return ONLY valid JSON matching this schema:
 }}"""
 
     try:
-        llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash-lite", temperature=0, max_retries=1)
+        llm = get_llm(temperature=0.0)
         response = llm.invoke([HumanMessage(content=prompt)])
         
         # Parse JSON from response — handle both string and list content formats
-        content = response.content
-        if isinstance(content, list):
-            # Newer Gemini models return a list of content parts
-            content = "".join(
-                part.get("text", str(part)) if isinstance(part, dict) else str(part)
-                for part in content
-            )
-        content = str(content)
+        content = _normalize_content(response.content)
         if "```json" in content:
             content = content.split("```json")[1].split("```")[0]
         elif "```" in content:

@@ -1,20 +1,18 @@
 import time
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from agents.state import AgentState
 from agents.emit import emit_event, log_observation
+from agents.llm import get_llm, _normalize_content
 
 def critic_node(state: AgentState) -> AgentState:
     """
     Reviews the most recently completed subtask output.
-    C2 Fix: Self-discovers the last completed subtask instead of relying
+    Self-discovers the last completed subtask instead of relying
     on current_subtask_id (which may be stale from conditional edge routing).
     """
     run_id = state["run_id"]
     
     # Find the most recently completed subtask that hasn't been reviewed yet.
-    # We identify "just completed" as a subtask with status="complete" and output,
-    # working backwards through the list to find the latest one.
     subtask = None
     for st in reversed(state.get("subtasks", [])):
         if st["status"] == "complete" and st.get("output"):
@@ -44,16 +42,10 @@ For this version of the pipeline, your job is simply to review the output, ident
 Please provide a very brief 1-2 sentence review note summarizing your thoughts."""
 
     try:
-        llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash-lite", temperature=0.2, max_retries=1)
+        llm = get_llm(temperature=0.2)
         response = llm.invoke([HumanMessage(content=prompt)])
         
-        raw = response.content
-        if isinstance(raw, list):
-            raw = "".join(
-                part.get("text", str(part)) if isinstance(part, dict) else str(part)
-                for part in raw
-            )
-        review_note = str(raw).strip()
+        review_note = _normalize_content(response.content).strip()
         latency = int((time.time() - start_t) * 1000)
         
         emit_event(run_id, "critic", "llm_call", "complete", f"Critic approved {st_id}")

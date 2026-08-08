@@ -19,3 +19,6 @@ redis
 langgraph
 langchain
 langchain-google-genai
+pytest
+pytest-mock
+pytest-asyncio

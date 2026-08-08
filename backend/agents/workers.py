@@ -1,8 +1,8 @@
 import time
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from agents.state import AgentState
 from agents.emit import emit_event, log_observation
+from agents.llm import get_llm, _normalize_content
 
 def execute_worker_node(state: AgentState) -> AgentState:
     run_id = state["run_id"]
@@ -27,7 +27,7 @@ def execute_worker_node(state: AgentState) -> AgentState:
     emit_event(run_id, agent_type, "llm_call", "running", f"Generating content for {st_id}")
     start_t = time.time()
     
-    # Optional: compile memory/context from previously completed subtasks
+    # Compile memory/context from previously completed subtasks
     context_blocks = []
     for st in state.get("subtasks", []):
         if st["status"] == "complete" and st.get("output") and st["id"] != st_id:
@@ -51,16 +51,10 @@ Your output must fulfill this criteria:
     prompt += "\nPlease produce your final deliverable now. Format your response cleanly using Markdown."
 
     try:
-        llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash-lite", temperature=0.4, max_retries=1)
+        llm = get_llm(temperature=0.4)
         response = llm.invoke([HumanMessage(content=prompt)])
         
-        raw = response.content
-        if isinstance(raw, list):
-            raw = "".join(
-                part.get("text", str(part)) if isinstance(part, dict) else str(part)
-                for part in raw
-            )
-        output = str(raw).strip()
+        output = _normalize_content(response.content).strip()
         subtask["output"] = output
         subtask["status"] = "complete"
         

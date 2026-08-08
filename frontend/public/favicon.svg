@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="16" fill="#08090a"/>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="none" stroke="#27272a" stroke-width="2"/>
+  
+  <!-- Terminal Prompt Symbol >_ -->
+  <path d="M18 22L28 32L18 42" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34 42H46" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+  
+  <!-- Subtle Accent Dot -->
+  <circle cx="46" cy="22" r="3" fill="#a1a1aa"/>
+</svg>

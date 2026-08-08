@@ -22,3 +22,4 @@ langchain-google-genai
 pytest
 pytest-mock
 pytest-asyncio
+slowapi
